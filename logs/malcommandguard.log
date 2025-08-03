@@ -1,0 +1,93 @@
+[2025-08-01 06:57:22,123] INFO: Classified – URL => benign
+[2025-08-01 06:57:39,017] INFO: Classified – URL => malicious
+[2025-08-01 07:00:22,813] INFO: RuleCheck – RULE => Hit
+[2025-08-01 07:00:43,407] INFO: RuleCheck – RULE => Clear
+[2025-08-01 07:24:07,765] INFO: URL => benign
+[2025-08-01 07:33:04,586] INFO: CMD => Malicious
+[2025-08-01 07:33:04,586] WARNING: RuleOverride – hits: Download PowerShell script, HTTP(S) Download, CLI Download utility
+[2025-08-01 07:38:51,501] INFO: URL => malicious
+[2025-08-01 07:39:09,200] INFO: CMD => ERROR: unsafe characters
+[2025-08-01 07:39:21,926] INFO: RULE => Suspicious
+[2025-08-01 07:39:38,428] INFO: URL => benign
+[2025-08-01 07:42:27,844] INFO: URL => malicious
+[2025-08-01 07:42:39,102] INFO: URL => benign
+[2025-08-01 07:43:02,623] INFO: CMD => Malicious
+[2025-08-01 07:43:02,623] WARNING: RuleOverride – hits: Curl PowerShell script, HTTP(S) Download, CLI Download utility
+[2025-08-01 07:54:41,141] INFO: CMD => Malicious
+[2025-08-01 07:54:41,142] WARNING: RuleOverride – hits: Curl PowerShell script, HTTP(S) Download, CLI Download utility
+[2025-08-01 07:54:53,358] INFO: URL => Legitimate
+[2025-08-01 07:55:03,389] INFO: URL => malicious
+[2025-08-01 08:12:33,697] ERROR: Fatal error
+Traceback (most recent call last):
+  File "C:\Users\yehli\Desktop\De-guard-tecT\cli.py", line 96, in main
+    handle_url(args.url)
+  File "C:\Users\yehli\Desktop\De-guard-tecT\cli.py", line 41, in handle_url
+    label = classify_url(url)
+            ^^^^^^^^^^^^^^^^^
+  File "C:\Users\yehli\Desktop\De-guard-tecT\ml_models.py", line 48, in classify_url
+    model = load_url_model()
+            ^^^^^^^^^^^^^^^^
+  File "C:\Users\yehli\Desktop\De-guard-tecT\ml_models.py", line 24, in load_url_model
+    _url_model = joblib.load(URL_MODEL_PATH)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\yehli\Desktop\De-guard-tecT\.venv\Lib\site-packages\joblib\numpy_pickle.py", line 658, in load
+    obj = _unpickle(fobj, filename, mmap_mode)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\yehli\Desktop\De-guard-tecT\.venv\Lib\site-packages\joblib\numpy_pickle.py", line 577, in _unpickle
+    obj = unpickler.load()
+          ^^^^^^^^^^^^^^^^
+  File "C:\Users\yehli\AppData\Local\Programs\Python\Python311\Lib\pickle.py", line 1213, in load
+    dispatch[key[0]](self)
+  File "C:\Users\yehli\AppData\Local\Programs\Python\Python311\Lib\pickle.py", line 1538, in load_stack_global
+    self.append(self.find_class(module, name))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\yehli\AppData\Local\Programs\Python\Python311\Lib\pickle.py", line 1580, in find_class
+    __import__(module, level=0)
+  File "C:\Users\yehli\Desktop\De-guard-tecT\.venv\Lib\site-packages\sklearn\__init__.py", line 82, in <module>
+    from .base import clone
+  File "C:\Users\yehli\Desktop\De-guard-tecT\.venv\Lib\site-packages\sklearn\base.py", line 17, in <module>
+    from .utils import _IS_32BIT
+  File "C:\Users\yehli\Desktop\De-guard-tecT\.venv\Lib\site-packages\sklearn\utils\__init__.py", line 19, in <module>
+    from .murmurhash import murmurhash3_32
+  File "sklearn\utils\murmurhash.pyx", line 1, in init sklearn.utils.murmurhash
+ValueError: numpy.dtype size changed, may indicate binary incompatibility. Expected 96 from C header, got 88 from PyObject
+[2025-08-01 08:17:34,457] INFO: URL => malicious
+[2025-08-01 08:18:07,705] INFO: CMD => Malicious
+[2025-08-01 08:18:07,705] WARNING: RuleOverride – hits: HTTP(S) Download
+[2025-08-01 12:20:15,596] INFO: URL => ERROR: invalid syntax
+[2025-08-01 12:20:27,357] INFO: URL => ERROR: invalid syntax
+[2025-08-01 12:21:02,219] INFO: URL => malicious
+[2025-08-01 12:24:17,884] ERROR: Fatal error
+Traceback (most recent call last):
+  File "C:\Users\yehli\Desktop\De-guard-tecT\cli.py", line 98, in main
+    handle_cmd(args.cmd_parts)
+  File "C:\Users\yehli\Desktop\De-guard-tecT\cli.py", line 60, in handle_cmd
+    label = classify_cmd(cmd)
+            ^^^^^^^^^^^^^^^^^
+  File "C:\Users\yehli\Desktop\De-guard-tecT\ml_models.py", line 70, in classify_cmd
+    return load_cmd_model().predict([cmd])[0]
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\yehli\Desktop\De-guard-tecT\ml_models.py", line 32, in load_cmd_model
+    _cmd_model = joblib.load(CMD_MODEL_PATH)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\yehli\Desktop\De-guard-tecT\.venv\Lib\site-packages\joblib\numpy_pickle.py", line 749, in load
+    obj = _unpickle(
+          ^^^^^^^^^^
+  File "C:\Users\yehli\Desktop\De-guard-tecT\.venv\Lib\site-packages\joblib\numpy_pickle.py", line 626, in _unpickle
+    obj = unpickler.load()
+          ^^^^^^^^^^^^^^^^
+  File "C:\Users\yehli\AppData\Local\Programs\Python\Python311\Lib\pickle.py", line 1213, in load
+    dispatch[key[0]](self)
+  File "C:\Users\yehli\Desktop\De-guard-tecT\.venv\Lib\site-packages\joblib\numpy_pickle.py", line 446, in load_build
+    Unpickler.load_build(self)
+  File "C:\Users\yehli\AppData\Local\Programs\Python\Python311\Lib\pickle.py", line 1718, in load_build
+    setstate(state)
+  File "sklearn\\tree\\_tree.pyx", line 865, in sklearn.tree._tree.Tree.__setstate__
+  File "sklearn\\tree\\_tree.pyx", line 1571, in sklearn.tree._tree._check_node_ndarray
+ValueError: node array from the pickle has an incompatible dtype:
+- expected: {'names': ['left_child', 'right_child', 'feature', 'threshold', 'impurity', 'n_node_samples', 'weighted_n_node_samples', 'missing_go_to_left'], 'formats': ['<i8', '<i8', '<i8', '<f8', '<f8', '<i8', '<f8', 'u1'], 'offsets': [0, 8, 16, 24, 32, 40, 48, 56], 'itemsize': 64}
+- got     : [('left_child', '<i8'), ('right_child', '<i8'), ('feature', '<i8'), ('threshold', '<f8'), ('impurity', '<f8'), ('n_node_samples', '<i8'), ('weighted_n_node_samples', '<f8')]
+[2025-08-01 12:25:16,742] INFO: RULE => Legitimate
+[2025-08-03 15:10:49,349] INFO: CMD => benign
+[2025-08-03 15:10:58,893] INFO: CMD => benign
+[2025-08-03 15:11:12,204] INFO: CMD => benign
