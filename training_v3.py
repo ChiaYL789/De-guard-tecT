@@ -15,9 +15,9 @@ import argparse
 import io
 import json
 import logging
-import os
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import joblib
 import numpy as np
@@ -30,6 +30,7 @@ from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
+from config import SAFE_DOMAINS
 from nlp_features import augment              # meta-token generator
 from security_utils import safe_open_read, safe_open_binary
 
@@ -55,20 +56,32 @@ def setup_logging(path: str) -> None:
 # Helpers for the URL dataset
 # ---------------------------------------------------------------------------
 
-SAFE_DOMAINS = {
-    "github.com",
-    "google.com",
-    "youtube.com",
-    "microsoft.com",
-}
+def _host_is_trusted(host: str) -> bool:
+    """
+    Allow-list policy: host must be exactly a trusted domain or a subdomain of it.
+    E.g., docs.python.org -> trusted because it endswith ".python.org".
+    """
+    h = (host or "").lower()
+    for d in SAFE_DOMAINS:
+        if h == d or h.endswith("." + d):
+            return True
+    return False
+
 
 def clean_url_labels(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Force the label 'benign' for any record whose URL contains a
-    whitelisted corporate domain.  This reduces false positives
-    during training.
+    Force the label 'benign' only when the URL's hostname is a trusted
+    domain or its subdomain. This avoids falsely whitelisting deceptive
+    hosts like accounts.google.com.evil.tld.
     """
-    mask = df["url"].str.contains('|'.join(SAFE_DOMAINS), case=False, na=False)
+    def is_safe(u: str) -> bool:
+        try:
+            host = (urlsplit(u).hostname or "").lower()
+            return _host_is_trusted(host)
+        except Exception:
+            return False
+
+    mask = df["url"].map(is_safe)
     df.loc[mask, "label"] = "benign"
     return df
 
@@ -98,7 +111,7 @@ def train_url_model(csv_path: str, test_size: float, seed: int):
             max_iter=1_000,
             class_weight="balanced",
             random_state=seed,
-            n_jobs=-1,
+            # solver left as default ('lbfgs'); n_jobs not used by lbfgs
         )),
     ])
 
@@ -180,12 +193,12 @@ def main():
 
     # ---------------- Train URL model ----------------
     url_model, url_report = train_url_model(args.url_csv, args.test_size, args.seed)
-    joblib.dump(url_model, Path(args.model_dir) / "url_classifier.pkl")
+    joblib.dump(url_model, Path(args.model_dir) / "url_classifier.pkl", compress=3)
     save_json(url_report,         Path(args.model_dir) / "url_report.json")
 
     # ---------------- Train CMD model ----------------
     cmd_model, cmd_report = train_cmd_model(args.cmd_xlsx, args.test_size, args.seed)
-    joblib.dump(cmd_model, Path(args.model_dir) / "cmd_classifier.pkl")
+    joblib.dump(cmd_model, Path(args.model_dir) / "cmd_classifier.pkl", compress=3)
     save_json(cmd_report,         Path(args.model_dir) / "cmd_report.json")
 
     logging.info("✅ Training complete. Models saved to %s", args.model_dir)

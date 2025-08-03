@@ -1,11 +1,10 @@
 import argparse
 import sys
 from typing import List
-
-from rules import apply_rules
+from rules import apply_rules, apply_benign_rules
 from ml_models import classify_url, classify_cmd
 from logger import get_logger
-from security_utils import validate_url, validate_cmd
+from security_utils import validate_url, validate_cmd, sanitize_text
 
 logger = get_logger()
 
@@ -34,30 +33,71 @@ def handle_url(url: str) -> None:
     label = classify_url(url)
     log_and_print("URL", label)
 
-
 def handle_cmd(cmd_parts: List[str]) -> None:
     """
-    Join the remainder of argv into a single command string, validate,
-    run rule-engine first, then ML (with NLP augmentation inside).
+    Join the remainder of argv into a single command string, sanitize, validate,
+    short-circuit benign patterns, then apply rule engine (fast malicious override),
+    and finally ML (with NLP augmentation inside classify_cmd()).
+
+    Supports:
+      - --verbose : print rule hits and NLP meta-tokens
+      - --unsafe  : bypass shell metacharacter validation (demo/testing only)
     """
+    import sys
+
+    # Rebuild command string
     cmd = " ".join(cmd_parts).strip()
+
+    # Optional sanitization
+    try:
+        from security_utils import sanitize_text
+        cmd = sanitize_text(cmd)
+    except Exception:
+        pass
 
     if not cmd:
         log_and_print("CMD", "ERROR: no command provided")
         sys.exit(1)
 
-    if not validate_cmd(cmd):
+    # Allow advanced demo strings when --unsafe is passed
+    allow_unsafe = ("--unsafe" in sys.argv)
+
+    # Input validation (blocks metacharacters/newlines/etc.)
+    if not allow_unsafe and not validate_cmd(cmd):
         log_and_print("CMD", "ERROR: unsafe characters")
         sys.exit(1)
 
-    # Rule engine first (fast-path override)
+    # Benign short-circuit: e.g., "schtasks /Query ..." (if helper available)
+    try:
+        from rules import apply_benign_rules  # optional helper
+        safe_hits = apply_benign_rules(cmd)
+    except Exception:
+        safe_hits = []
+    if safe_hits:
+        if "-v" in sys.argv or "--verbose" in sys.argv:
+            print(f"[debug] benign pattern: {', '.join(safe_hits)}")
+        # Use lowercase to match model outputs ("benign")
+        log_and_print("CMD", "benign", extra=", ".join(safe_hits))
+        return
+
+    # Rule engine first (fast-path malicious override)
     rule_hits = apply_rules(cmd)
     if rule_hits:
+        if "-v" in sys.argv or "--verbose" in sys.argv:
+            print(f"[debug] rule hits: {', '.join(rule_hits)}")
         log_and_print("CMD", "Malicious", extra=", ".join(rule_hits))
         logger.warning("RuleOverride – hits: %s", ", ".join(rule_hits))
         return
 
-    # ML prediction (classify_cmd() will enrich with NLP meta-tokens)
+    # Verbose: show NLP meta-tokens (if NLP module present)
+    if "-v" in sys.argv or "--verbose" in sys.argv:
+        try:
+            from nlp_features import meta_tokens
+            print(f"[debug] nlp: {meta_tokens(cmd)}")
+        except Exception:
+            pass
+
+    # ML prediction (classify_cmd() enriches input with NLP augment)
     label = classify_cmd(cmd)
     log_and_print("CMD", label)
 

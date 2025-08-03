@@ -1,46 +1,95 @@
-import re
-import pathlib
-import urllib.parse as _url
-
-__all__ = [
-    "validate_url",
-    "validate_cmd",
-    "safe_open_read",
-]
-
-# ------------ URL validation -----------------------------------------
-_URL_RE = re.compile(
-    r"^(https?|ftp)://"            # scheme
-    r"[A-Za-z0-9\-._~]+(:[0-9]+)?" # host[:port]
-    r"(/.*)?$",                    # optional path/query
-    re.I,
+# security_utils.py
+import io, os, re, unicodedata, pathlib
+from typing import Optional
+from urllib.parse import urlsplit
+from config import (
+    PROJECT_ROOT, SAFE_READ_ROOTS, ALLOWED_READ_EXTS, MAX_FILE_BYTES,
+    SAFE_DOMAINS, BLOCKED_TLDS, MAX_URL_LENGTH, ALLOWED_SCHEMES,
+    BAD_SHELL_CHARS, MAX_CMD_LENGTH
 )
 
+# ---------- Sanitization -----------------------------------------------------
+_ZW = {"\u200b", "\u200c", "\u200d", "\ufeff"}  # zero-width chars
+
+def sanitize_text(s: str) -> str:
+    """Unicode-normalize, drop control/zero-width chars, collapse whitespace."""
+    if s is None:
+        return ""
+    s = unicodedata.normalize("NFKC", s)
+    s = "".join(ch for ch in s if ch not in _ZW and unicodedata.category(ch)[0] != "C")
+    s = " ".join(s.split())
+    return s.strip()
+
+# ---------- URL validation ---------------------------------------------------
 def validate_url(url: str) -> bool:
-    """True if url is syntactically safe & RFC-compliant."""
-    return bool(_URL_RE.fullmatch(url.strip()))
+    """Strict-ish URL validation with scheme/host/length checks."""
+    url = sanitize_text(url)
+    if not url or len(url) > MAX_URL_LENGTH:
+        return False
 
-# ------------ command validation -------------------------------------
-from config import BAD_SHELL_CHARS, MAX_URL_LENGTH
-_BAD_SHELL_CHARS = re.compile(BAD_SHELL_CHARS)
+    parts = urlsplit(url)
+    if parts.scheme.lower() not in ALLOWED_SCHEMES:
+        return False
+    if not parts.netloc:
+        return False
 
+    host = parts.hostname or ""
+    # Optional: shallow TLD block for demo (keep list tiny)
+    if "." in host:
+        tld = host.rsplit(".", 1)[-1].lower()
+        if tld in BLOCKED_TLDS:
+            return False
+    return True
 
+# ---------- Command validation ----------------------------------------------
 def validate_cmd(cmd: str) -> bool:
-    """
-    Reject obvious shell-injection attempts:
-    1. disallow ; & | ` $ > <  (PowerShell/CMD separators)
-    2. length limit 8 kB
-    """
-    cmd = " ".join(cmd.split())          # collapse repeated whitespace
-    return len(cmd) < 8192 and not _BAD_SHELL_CHARS.search(cmd)
+    """Reject unsafe metacharacters and overly long commands."""
+    cmd = sanitize_text(cmd)
+    if not cmd or len(cmd) > MAX_CMD_LENGTH:
+        return False
+    if BAD_SHELL_CHARS.search(cmd):
+        return False
+    return True
 
-# ------------ safe file read helper ----------------------------------
-def safe_open_read(path: str) -> str:
-    """
-    Read a *data* file located inside project folder. Raises ValueError
-    if an absolute path or parent-traversal is attempted.
-    """
+# ---------- Secure file handling --------------------------------------------
+class UnsafePathError(Exception): ...
+class DisallowedExtensionError(Exception): ...
+class FileTooLargeError(Exception): ...
+
+def _ensure_safe_read_path(path: str | os.PathLike) -> pathlib.Path:
     p = pathlib.Path(path)
-    if p.is_absolute() or ".." in p.parts:
-        raise ValueError("Unsafe path detected")
-    return p.read_text(encoding="utf-8", errors="ignore")
+    # Block absolute paths and traversal
+    if p.is_absolute():
+        raise UnsafePathError("Absolute paths are not allowed")
+    if ".." in p.parts:
+        raise UnsafePathError("Path traversal is not allowed")
+
+    # Resolve and ensure within allowed roots
+    rp = (PROJECT_ROOT / p).resolve()
+    if not any(str(rp).startswith(str(root.resolve()) + os.sep) for root in SAFE_READ_ROOTS):
+        raise UnsafePathError(f"Read denied outside safe roots: {rp}")
+
+    # Block symlinks in the resolved chain (best-effort)
+    try:
+        for parent in [rp] + list(rp.parents):
+            if parent.is_symlink():
+                raise UnsafePathError("Symlinked paths are not allowed")
+    except Exception:
+        pass
+
+    # Extension allow-list
+    if rp.suffix.lower() not in ALLOWED_READ_EXTS:
+        raise DisallowedExtensionError(f"Extension not allowed: {rp.suffix}")
+    # Size check
+    if rp.exists() and rp.stat().st_size > MAX_FILE_BYTES:
+        raise FileTooLargeError(f"File too large: {rp.stat().st_size} bytes")
+    return rp
+
+def safe_open_read(path: str, encoding: str = "utf-8") -> str:
+    rp = _ensure_safe_read_path(path)
+    with rp.open("r", encoding=encoding, errors="replace") as fh:
+        return fh.read()
+
+def safe_open_binary(path: str):
+    rp = _ensure_safe_read_path(path)
+    return rp.open("rb")

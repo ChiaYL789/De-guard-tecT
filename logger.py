@@ -14,7 +14,7 @@ def get_logger(name: str = "malcommandguard") -> logging.Logger:
     """Return a singleton logger configured for console + file."""
     logger = logging.getLogger(name)
 
-    if logger.handlers:          # already configured
+    if logger.handlers:         
         return logger
 
     logger.setLevel(logging.DEBUG)
