@@ -119,3 +119,7 @@ UnboundLocalError: cannot access local variable 'cmd' where it is not associated
 [2025-08-03 21:20:37,735] WARNING: RuleOverride – hits: BITSAdmin Download
 [2025-08-03 21:20:42,907] INFO: URL => malicious
 [2025-08-03 21:21:03,517] INFO: URL => Malicious
+[2025-08-03 23:26:08,324] INFO: CMD => ERROR: unsafe characters
+[2025-08-03 23:26:48,286] INFO: CMD => suspicious
+[2025-08-03 23:27:15,303] INFO: CMD => benign
+[2025-08-03 23:27:26,408] INFO: CMD => ERROR: unsafe characters

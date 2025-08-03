@@ -1,40 +1,24 @@
-#!/usr/bin/env python3
-"""
-training_v3.py – one-shot trainer for MalCommandGuard models
-------------------------------------------------------------
-Trains two independent classifiers:
-
-1. URL classifier  – detects benign / suspicious / malicious links
-2. CMD classifier  – detects benign / suspicious / malicious shell commands
-                     (augmented with NLP-derived meta tokens)
-
-Both models and their evaluation reports are written to the chosen --model-dir.
-"""
-
 import argparse
 import io
 import json
 import logging
 import sys
-from pathlib import Path
-from urllib.parse import urlsplit
-
 import joblib
 import numpy as np
 import pandas as pd
 import sklearn
+from pathlib import Path
+from urllib.parse import urlsplit
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-
 from config import SAFE_DOMAINS
 from nlp_features import augment              # meta-token generator
 from security_utils import safe_open_read, safe_open_binary
 
-print("🛠️  Hello—training_v3 is starting!")
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -111,7 +95,6 @@ def train_url_model(csv_path: str, test_size: float, seed: int):
             max_iter=1_000,
             class_weight="balanced",
             random_state=seed,
-            # solver left as default ('lbfgs'); n_jobs not used by lbfgs
         )),
     ])
 
@@ -127,11 +110,10 @@ def train_url_model(csv_path: str, test_size: float, seed: int):
 def train_cmd_model(xlsx_path: str, test_size: float, seed: int):
     logging.info("Loading CMD XLSX …")
 
-    # Secure file read (blocks path traversal)
     with safe_open_binary(xlsx_path) as fh:
         df = pd.read_excel(fh).dropna(subset=["prompt", "Label"])
 
-    X = df["prompt"].apply(augment)        # append meta-tokens
+    X = df["prompt"].apply(augment)       
     y = df["Label"]
 
     X_tr, X_te, y_tr, y_te = train_test_split(
@@ -142,7 +124,7 @@ def train_cmd_model(xlsx_path: str, test_size: float, seed: int):
         ("tfidf", TfidfVectorizer(
             ngram_range=(1, 2),
             max_features=15_000,
-            token_pattern=r"(?u)\b\w+\b",   # keeps meta tokens intact
+            token_pattern=r"(?u)\b\w+\b",  
         )),
         ("clf", RandomForestClassifier(
             n_estimators=300,

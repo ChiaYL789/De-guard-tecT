@@ -1,6 +1,5 @@
 import joblib
-import pandas as pd  # (not used directly; kept for compatibility)
-from config import SAFE_DOMAINS
+import pandas as pd  
 from rules import cmd_rule_check
 from urllib.parse import urlparse
 from security_utils import safe_open_binary, sanitize_text
@@ -10,7 +9,6 @@ _cmd_model = None
 
 
 def load_url_model():
-    """Load the URL classification pipeline (singleton)."""
     global _url_model
     if _url_model is None:
         try:
@@ -22,7 +20,6 @@ def load_url_model():
 
 
 def load_cmd_model():
-    """Load the CMD classification pipeline (singleton)."""
     global _cmd_model
     if _cmd_model is None:
         try:
@@ -71,7 +68,6 @@ def classify_url(url: str) -> str:
     url = sanitize_text(url)
     host = (urlparse(url).hostname or "").lower()
 
-    # Runtime policy layer
     if _is_trusted_host(host):
         return "Legitimate"
     if _is_deceptive_brand_in_subdomain(host):
@@ -98,12 +94,10 @@ def classify_cmd(cmd: str) -> str:
     Apply fast regex rules first; if any hit, return 'Malicious'.
     Otherwise, enrich the command with NLP meta-tokens and classify.
     """
-    # Heuristic rule short-circuit (e.g., certutil, mshta patterns)
     if cmd_rule_check(cmd):
         return "Malicious"
 
-    # NLP augmentation (adds tokens like LONGCMD, ENCODED, SUSPECT_VERB)
-    from nlp_features import augment  # local import to avoid hard dependency at module load
+    from nlp_features import augment
     enriched = augment(cmd)
 
     # ML prediction

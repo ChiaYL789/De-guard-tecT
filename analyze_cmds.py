@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 
-# 1) load your sheet
+# 1) load the sheet
 from security_utils import safe_open_binary
 with safe_open_binary('dataset/windows_cmd.xlsx') as fh:
     df = pd.read_excel(fh)

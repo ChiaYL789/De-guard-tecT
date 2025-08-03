@@ -12,7 +12,6 @@ logger = get_logger()
 # utilities
 # -------------------------------------------------------------------
 def log_and_print(kind: str, label: str, extra: str = "") -> None:
-    """Print to console and write a concise line to the logfile."""
     prefix = f"{kind} → "
     print(f"{prefix}{label}" + (f" ({extra})" if extra else ""))
     logger.info("%s => %s%s", kind, label, f" ({extra})" if extra else "")
@@ -21,7 +20,6 @@ def log_and_print(kind: str, label: str, extra: str = "") -> None:
 # handlers
 # -------------------------------------------------------------------
 def handle_url(url: str) -> None:
-    """Validate and classify a single URL."""
     if not url:
         log_and_print("URL", "ERROR: missing URL")
         sys.exit(1)
@@ -34,21 +32,11 @@ def handle_url(url: str) -> None:
     log_and_print("URL", label)
 
 def handle_cmd(cmd_parts: List[str]) -> None:
-    """
-    Join the remainder of argv into a single command string, sanitize, validate,
-    short-circuit benign patterns, then apply rule engine (fast malicious override),
-    and finally ML (with NLP augmentation inside classify_cmd()).
-
-    Supports:
-      - --verbose : print rule hits and NLP meta-tokens
-      - --unsafe  : bypass shell metacharacter validation (demo/testing only)
-    """
+ 
     import sys
 
-    # Rebuild command string
     cmd = " ".join(cmd_parts).strip()
 
-    # Optional sanitization
     try:
         from security_utils import sanitize_text
         cmd = sanitize_text(cmd)
@@ -59,28 +47,25 @@ def handle_cmd(cmd_parts: List[str]) -> None:
         log_and_print("CMD", "ERROR: no command provided")
         sys.exit(1)
 
-    # Allow advanced demo strings when --unsafe is passed
     allow_unsafe = ("--unsafe" in sys.argv)
 
-    # Input validation (blocks metacharacters/newlines/etc.)
     if not allow_unsafe and not validate_cmd(cmd):
         log_and_print("CMD", "ERROR: unsafe characters")
         sys.exit(1)
 
-    # Benign short-circuit: e.g., "schtasks /Query ..." (if helper available)
+    
     try:
-        from rules import apply_benign_rules  # optional helper
+        from rules import apply_benign_rules  
         safe_hits = apply_benign_rules(cmd)
     except Exception:
         safe_hits = []
     if safe_hits:
         if "-v" in sys.argv or "--verbose" in sys.argv:
             print(f"[debug] benign pattern: {', '.join(safe_hits)}")
-        # Use lowercase to match model outputs ("benign")
+        
         log_and_print("CMD", "benign", extra=", ".join(safe_hits))
         return
 
-    # Rule engine first (fast-path malicious override)
     rule_hits = apply_rules(cmd)
     if rule_hits:
         if "-v" in sys.argv or "--verbose" in sys.argv:
@@ -89,7 +74,6 @@ def handle_cmd(cmd_parts: List[str]) -> None:
         logger.warning("RuleOverride – hits: %s", ", ".join(rule_hits))
         return
 
-    # Verbose: show NLP meta-tokens (if NLP module present)
     if "-v" in sys.argv or "--verbose" in sys.argv:
         try:
             from nlp_features import meta_tokens
@@ -97,7 +81,6 @@ def handle_cmd(cmd_parts: List[str]) -> None:
         except Exception:
             pass
 
-    # ML prediction (classify_cmd() enriches input with NLP augment)
     label = classify_cmd(cmd)
     log_and_print("CMD", label)
 
@@ -114,9 +97,9 @@ def handle_rule(text: str) -> None:
     else:
         log_and_print("RULE", "Legitimate")
 
-# -------------------------------------------------------------------
+
 def main() -> None:
-    import logging  # local import so we can tweak level for --verbose
+    import logging  
 
     parser = argparse.ArgumentParser(
         prog="MalCommandGuard",
@@ -133,7 +116,7 @@ def main() -> None:
     p_url = sub.add_parser("classify-url", help="Classify a URL")
     p_url.add_argument("url", help="The URL to classify")
 
-    # classify-cmd – capture everything after the sub-command
+    # classify-cmd 
     p_cmd = sub.add_parser("classify-cmd", help="Classify a command string")
     p_cmd.add_argument(
         "cmd_parts",
@@ -147,12 +130,11 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Optional: raise log level when --verbose is passed
     if args.verbose:
         try:
             logger.setLevel(logging.DEBUG)
         except Exception:
-            pass  # if logger doesn't support level changes, ignore
+            pass
 
     try:
         if args.subcmd == "classify-url":
@@ -165,13 +147,12 @@ def main() -> None:
             parser.print_help()
             sys.exit(1)
     except SystemExit:
-        # Re-raise clean exits (we use sys.exit for invalid input)
         raise
     except Exception:
         logger.exception("Fatal error")
         print("❌ Unexpected error – see log for details.")
         sys.exit(1)
 
-# -------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
