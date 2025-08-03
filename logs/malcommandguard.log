@@ -105,3 +105,17 @@ UnboundLocalError: cannot access local variable 'cmd' where it is not associated
 [2025-08-03 17:10:46,187] INFO: URL => malicious
 [2025-08-03 17:10:51,958] INFO: URL => malicious
 [2025-08-03 17:10:57,927] INFO: URL => malicious
+[2025-08-03 21:18:01,215] INFO: URL => malicious
+[2025-08-03 21:18:03,787] INFO: CMD => benign
+[2025-08-03 21:18:11,669] INFO: CMD => ERROR: unsafe characters
+[2025-08-03 21:19:24,317] INFO: URL => Legitimate
+[2025-08-03 21:19:35,583] INFO: URL => Malicious
+[2025-08-03 21:19:46,830] INFO: CMD => Malicious (Certutil Download)
+[2025-08-03 21:19:46,830] WARNING: RuleOverride – hits: Certutil Download
+[2025-08-03 21:19:59,639] INFO: CMD => Malicious (PowerShell Encoded Payload)
+[2025-08-03 21:19:59,639] WARNING: RuleOverride – hits: PowerShell Encoded Payload
+[2025-08-03 21:20:26,049] INFO: CMD => benign (SCHTASKS Query)
+[2025-08-03 21:20:37,735] INFO: CMD => Malicious (BITSAdmin Download)
+[2025-08-03 21:20:37,735] WARNING: RuleOverride – hits: BITSAdmin Download
+[2025-08-03 21:20:42,907] INFO: URL => malicious
+[2025-08-03 21:21:03,517] INFO: URL => Malicious
